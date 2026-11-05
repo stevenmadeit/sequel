@@ -1,0 +1,6 @@
+requests
+python-dotenv
+duckdb
+pytz
+psycopg2-binary
+sqlalchemy
