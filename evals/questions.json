@@ -1,0 +1,215 @@
+[
+  {
+    "id": "Q001",
+    "question": "How many job postings are in the database?",
+    "gold_sql": "SELECT COUNT(*) AS posting_count FROM stg_jobs",
+    "difficulty": "easy",
+    "split": "dev"
+  },
+  {
+    "id": "Q002",
+    "question": "How many distinct companies have job postings?",
+    "gold_sql": "SELECT COUNT(DISTINCT company_name) AS company_count FROM stg_jobs",
+    "difficulty": "easy",
+    "split": "dev"
+  },
+  {
+    "id": "Q003",
+    "question": "How many postings are from Lemon.io?",
+    "gold_sql": "SELECT COUNT(*) AS posting_count FROM stg_jobs WHERE company_name = 'Lemon.io'",
+    "difficulty": "easy",
+    "split": "dev"
+  },
+  {
+    "id": "Q004",
+    "question": "How many job-skill mentions are recorded?",
+    "gold_sql": "SELECT COUNT(*) AS mention_count FROM job_skills",
+    "difficulty": "easy",
+    "split": "dev"
+  },
+  {
+    "id": "Q005",
+    "question": "How many different skills are represented in the job skills table?",
+    "gold_sql": "SELECT COUNT(DISTINCT skill) AS skill_count FROM job_skills",
+    "difficulty": "easy",
+    "split": "dev"
+  },
+  {
+    "id": "Q006",
+    "question": "What are the five most frequently mentioned skills, ordered by mention count descending and then skill name alphabetically?",
+    "gold_sql": "SELECT skill, COUNT(*) AS mention_count FROM job_skills GROUP BY skill ORDER BY mention_count DESC, skill ASC LIMIT 5",
+    "difficulty": "medium",
+    "split": "dev"
+  },
+  {
+    "id": "Q007",
+    "question": "Which five companies have the most postings, ordered by posting count and then company name?",
+    "gold_sql": "SELECT company_name, COUNT(*) AS posting_count FROM stg_jobs GROUP BY company_name ORDER BY posting_count DESC, company_name ASC LIMIT 5",
+    "difficulty": "medium",
+    "split": "dev"
+  },
+  {
+    "id": "Q008",
+    "question": "Which five publication dates have the most job postings, with earlier dates first when counts tie?",
+    "gold_sql": "SELECT CAST(publication_date AS DATE) AS published_on, COUNT(*) AS posting_count FROM stg_jobs GROUP BY published_on ORDER BY posting_count DESC, published_on ASC LIMIT 5",
+    "difficulty": "medium",
+    "split": "dev"
+  },
+  {
+    "id": "Q009",
+    "question": "Which pairs of skills appear together in the most job postings? Include every tied pair.",
+    "gold_sql": "WITH pairs AS (SELECT a.skill AS skill_a, b.skill AS skill_b, COUNT(*) AS posting_count FROM job_skills a JOIN job_skills b ON a.job_id = b.job_id AND a.skill < b.skill GROUP BY a.skill, b.skill), ranked AS (SELECT skill_a, skill_b, posting_count, RANK() OVER (ORDER BY posting_count DESC) AS position FROM pairs) SELECT skill_a, skill_b, posting_count FROM ranked WHERE position = 1 ORDER BY skill_a, skill_b",
+    "difficulty": "hard",
+    "split": "dev"
+  },
+  {
+    "id": "Q010",
+    "question": "Which skills are mentioned more often than the average mention count per skill, and what is each mention count?",
+    "gold_sql": "WITH skill_counts AS (SELECT skill, COUNT(*) AS mention_count FROM job_skills GROUP BY skill), average_count AS (SELECT AVG(mention_count) AS value FROM skill_counts) SELECT skill, mention_count FROM skill_counts WHERE mention_count > (SELECT value FROM average_count) ORDER BY mention_count DESC, skill ASC",
+    "difficulty": "hard",
+    "split": "dev"
+  },
+  {
+    "id": "Q011",
+    "question": "How many job postings have a description?",
+    "gold_sql": "SELECT COUNT(*) AS described_postings FROM stg_jobs WHERE description IS NOT NULL AND TRIM(description) <> ''",
+    "difficulty": "easy",
+    "split": "test"
+  },
+  {
+    "id": "Q012",
+    "question": "How many distinct dates are covered by the skill trends table?",
+    "gold_sql": "SELECT COUNT(DISTINCT publication_date) AS trend_days FROM skill_trends",
+    "difficulty": "easy",
+    "split": "test"
+  },
+  {
+    "id": "Q013",
+    "question": "How many job postings are in the Software Development category?",
+    "gold_sql": "SELECT COUNT(*) AS posting_count FROM stg_jobs WHERE category = 'Software Development'",
+    "difficulty": "easy",
+    "split": "test"
+  },
+  {
+    "id": "Q014",
+    "question": "How many job postings were published on or after September 1, 2026?",
+    "gold_sql": "SELECT COUNT(*) AS posting_count FROM stg_jobs WHERE publication_date >= TIMESTAMPTZ '2026-09-01 00:00:00-07:00'",
+    "difficulty": "easy",
+    "split": "test"
+  },
+  {
+    "id": "Q015",
+    "question": "How many postings mention JavaScript?",
+    "gold_sql": "SELECT COUNT(DISTINCT job_id) AS posting_count FROM job_skills WHERE skill = 'JavaScript'",
+    "difficulty": "easy",
+    "split": "test"
+  },
+  {
+    "id": "Q016",
+    "question": "List the ten most mentioned skills and their mention counts, highest count first.",
+    "gold_sql": "SELECT skill, COUNT(*) AS mention_count FROM job_skills GROUP BY skill ORDER BY mention_count DESC, skill ASC LIMIT 10",
+    "difficulty": "medium",
+    "split": "test"
+  },
+  {
+    "id": "Q017",
+    "question": "Which job categories have at least four postings, and how many postings are in each?",
+    "gold_sql": "SELECT category, COUNT(*) AS posting_count FROM stg_jobs GROUP BY category HAVING COUNT(*) >= 4 ORDER BY posting_count DESC, category ASC",
+    "difficulty": "medium",
+    "split": "test"
+  },
+  {
+    "id": "Q018",
+    "question": "How many postings were published from August 25 through September 5, 2026, inclusive?",
+    "gold_sql": "SELECT COUNT(*) AS posting_count FROM stg_jobs WHERE CAST(publication_date AS DATE) BETWEEN DATE '2026-08-25' AND DATE '2026-09-05'",
+    "difficulty": "medium",
+    "split": "test"
+  },
+  {
+    "id": "Q019",
+    "question": "Which five companies have the most postings that mention React? Return company and count.",
+    "gold_sql": "SELECT j.company_name, COUNT(DISTINCT j.job_id) AS posting_count FROM stg_jobs j JOIN job_skills s ON s.job_id = j.job_id WHERE s.skill = 'React' GROUP BY j.company_name ORDER BY posting_count DESC, j.company_name ASC LIMIT 5",
+    "difficulty": "medium",
+    "split": "test"
+  },
+  {
+    "id": "Q020",
+    "question": "Show daily JavaScript job counts from August 25 through September 5, 2026.",
+    "gold_sql": "SELECT publication_date, job_posting_count FROM skill_trends WHERE skill = 'JavaScript' AND publication_date BETWEEN DATE '2026-08-25' AND DATE '2026-09-05' ORDER BY publication_date",
+    "difficulty": "medium",
+    "split": "test"
+  },
+  {
+    "id": "Q021",
+    "question": "How many distinct postings mention AWS? Use the job skills and job postings tables.",
+    "gold_sql": "SELECT COUNT(DISTINCT j.job_id) AS posting_count FROM stg_jobs j JOIN job_skills s ON s.job_id = j.job_id WHERE s.skill = 'AWS'",
+    "difficulty": "medium",
+    "split": "test"
+  },
+  {
+    "id": "Q022",
+    "question": "Which companies have postings mentioning SQL, and how many matching postings does each have?",
+    "gold_sql": "SELECT j.company_name, COUNT(DISTINCT j.job_id) AS posting_count FROM stg_jobs j JOIN job_skills s ON s.job_id = j.job_id WHERE s.skill = 'SQL' GROUP BY j.company_name ORDER BY posting_count DESC, j.company_name ASC",
+    "difficulty": "medium",
+    "split": "test"
+  },
+  {
+    "id": "Q023",
+    "question": "Which skills appear in postings from at least three different job categories?",
+    "gold_sql": "SELECT s.skill, COUNT(DISTINCT j.category) AS category_count FROM job_skills s JOIN stg_jobs j ON j.job_id = s.job_id GROUP BY s.skill HAVING COUNT(DISTINCT j.category) >= 3 ORDER BY category_count DESC, s.skill ASC",
+    "difficulty": "medium",
+    "split": "test"
+  },
+  {
+    "id": "Q024",
+    "question": "What are the five dates with the highest total skill-trend posting counts across skills?",
+    "gold_sql": "SELECT publication_date, SUM(job_posting_count) AS total_skill_postings FROM skill_trends GROUP BY publication_date ORDER BY total_skill_postings DESC, publication_date ASC LIMIT 5",
+    "difficulty": "medium",
+    "split": "test"
+  },
+  {
+    "id": "Q025",
+    "question": "For each publication date, what is the three-date trailing average of daily job postings?",
+    "gold_sql": "WITH daily AS (SELECT CAST(publication_date AS DATE) AS published_on, COUNT(*) AS posting_count FROM stg_jobs GROUP BY published_on) SELECT published_on, posting_count, AVG(posting_count) OVER (ORDER BY published_on ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) AS trailing_average FROM daily ORDER BY published_on",
+    "difficulty": "hard",
+    "split": "test"
+  },
+  {
+    "id": "Q026",
+    "question": "Show daily posting counts and the cumulative number of postings through each date.",
+    "gold_sql": "WITH daily AS (SELECT CAST(publication_date AS DATE) AS published_on, COUNT(*) AS posting_count FROM stg_jobs GROUP BY published_on) SELECT published_on, posting_count, SUM(posting_count) OVER (ORDER BY published_on ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cumulative_postings FROM daily ORDER BY published_on",
+    "difficulty": "hard",
+    "split": "test"
+  },
+  {
+    "id": "Q027",
+    "question": "Which job posting or postings mention the most distinct skills? Include all ties.",
+    "gold_sql": "WITH skill_counts AS (SELECT job_id, COUNT(DISTINCT skill) AS skill_count FROM job_skills GROUP BY job_id), ranked AS (SELECT job_id, skill_count, RANK() OVER (ORDER BY skill_count DESC) AS position FROM skill_counts) SELECT r.job_id, j.title, r.skill_count FROM ranked r JOIN stg_jobs j ON j.job_id = r.job_id WHERE r.position = 1 ORDER BY r.job_id",
+    "difficulty": "hard",
+    "split": "test"
+  },
+  {
+    "id": "Q028",
+    "question": "What is the job application conversion rate by skill?",
+    "gold_sql": null,
+    "difficulty": "hard",
+    "split": "test",
+    "expected_unanswerable": true
+  },
+  {
+    "id": "Q029",
+    "question": "Which candidate received the highest salary offer?",
+    "gold_sql": null,
+    "difficulty": "hard",
+    "split": "test",
+    "expected_unanswerable": true
+  },
+  {
+    "id": "Q030",
+    "question": "What is the average number of interview rounds by company?",
+    "gold_sql": null,
+    "difficulty": "hard",
+    "split": "test",
+    "expected_unanswerable": true
+  }
+]

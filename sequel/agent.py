@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+from dataclasses import dataclass
 from typing import Any
 
 import requests
@@ -9,6 +10,21 @@ from sequel.config import MODEL, OLLAMA_BASE_URL
 from sequel.data import get_schema, run_sql
 
 logger = logging.getLogger("sequel")
+
+
+@dataclass(frozen=True)
+class AgentResponse:
+    answer: str
+    sql: str
+    steps: int
+
+
+class AgentFailure(RuntimeError):
+    def __init__(self, message: str, failure_type: str, steps: int):
+        super().__init__(message)
+        self.failure_type = failure_type
+        self.steps = steps
+
 
 SYSTEM_PROMPT = """You are Sequel, a careful text-to-SQL analyst. Use only the available DuckDB data.
 On every turn reply with ONLY one JSON object. The allowed objects are:
@@ -29,14 +45,18 @@ at the cutoff and identify the other tied items.
 To count skills appearing together in postings, self-join job_skills on job_id
 and pair distinct skills with a.skill < b.skill; do not compare only neighboring
 rows with a window function.
+For a request for only the most frequent grouped result(s), count in a CTE,
+apply RANK() over the count, and filter to rank 1 so the SQL returns only the
+maximum and every tie. For day-level questions over publication_date, group by
+CAST(publication_date AS DATE), not the full timestamp.
 
 Worked example:
 User: Which skills appear together most often?
 Assistant: {"action":"get_schema"}
 User: TOOL RESULT: ...schema includes job_skills(job_id, skill)...
-Assistant: {"action":"run_sql","query":"SELECT a.skill AS skill_1, b.skill AS skill_2, COUNT(*) AS postings FROM job_skills a JOIN job_skills b ON a.job_id=b.job_id AND a.skill<b.skill GROUP BY a.skill,b.skill ORDER BY postings DESC"}
-User: TOOL RESULT: {"columns":["skill_1","skill_2","postings"],"rows":[["Python","SQL",42],["Python","Docker",42]],"row_count":2,"truncated":false}
-Assistant: {"action":"final_answer","answer":"Python and SQL and Python and Docker tie at 42 postings.","sql":"SELECT a.skill AS skill_1, b.skill AS skill_2, COUNT(*) AS postings FROM job_skills a JOIN job_skills b ON a.job_id=b.job_id AND a.skill<b.skill GROUP BY a.skill,b.skill ORDER BY postings DESC"}
+Assistant: {"action":"run_sql","query":"WITH pairs AS (SELECT a.skill AS skill_1, b.skill AS skill_2, COUNT(*) AS postings FROM job_skills a JOIN job_skills b ON a.job_id=b.job_id AND a.skill<b.skill GROUP BY a.skill,b.skill), ranked AS (SELECT skill_1, skill_2, postings, RANK() OVER (ORDER BY postings DESC) AS position FROM pairs) SELECT skill_1, skill_2, postings FROM ranked WHERE position=1 ORDER BY skill_1,skill_2"}
+User: TOOL RESULT: {"columns":["skill_1","skill_2","postings"],"rows":[["Python","Docker",42],["Python","SQL",42]],"row_count":2,"truncated":false}
+Assistant: {"action":"final_answer","answer":"Python and Docker and Python and SQL tie at 42 postings.","sql":"WITH pairs AS (SELECT a.skill AS skill_1, b.skill AS skill_2, COUNT(*) AS postings FROM job_skills a JOIN job_skills b ON a.job_id=b.job_id AND a.skill<b.skill GROUP BY a.skill,b.skill), ranked AS (SELECT skill_1, skill_2, postings, RANK() OVER (ORDER BY postings DESC) AS position FROM pairs) SELECT skill_1, skill_2, postings FROM ranked WHERE position=1 ORDER BY skill_1,skill_2"}
 """
 
 
@@ -88,11 +108,11 @@ def _validate_action(action: dict[str, Any]) -> None:
     raise ValueError("JSON object does not match an allowed action.")
 
 
-def _chat(messages: list[dict[str, str]]) -> str:
+def _chat(messages: list[dict[str, str]], model: str | None = None) -> str:
     response = requests.post(
         f"{OLLAMA_BASE_URL.rstrip('/')}/api/chat",
         json={
-            "model": MODEL,
+            "model": model or MODEL,
             "messages": messages,
             "stream": False,
             "options": {"temperature": 0},
@@ -111,17 +131,19 @@ def _short_summary(result: str) -> str:
     return " ".join(result.split())[:180]
 
 
-def ask(question: str) -> tuple[str, str]:
+def ask_detailed(question: str, model: str | None = None) -> AgentResponse:
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": question},
     ]
     last_successful_sql = ""
+    steps = 0
 
     for iteration in range(1, 9):
         action: dict[str, Any] | None = None
         for retry in range(3):
-            raw_reply = _chat(messages)
+            steps += 1
+            raw_reply = _chat(messages, model)
             try:
                 action = _extract_json_object(raw_reply)
                 _validate_action(action)
@@ -138,12 +160,16 @@ def ask(question: str) -> tuple[str, str]:
                     }
                 )
                 if retry == 2:
-                    raise RuntimeError(
-                        "Ollama failed to return a valid JSON action after 2 retries."
+                    raise AgentFailure(
+                        "Ollama failed to return a valid JSON action after 2 retries.",
+                        "invalid_json",
+                        steps,
                     ) from exc
 
         if action is None:
-            raise RuntimeError("Ollama did not return a valid action.")
+            raise AgentFailure(
+                "Ollama did not return a valid action.", "invalid_json", steps
+            )
         messages.append({"role": "assistant", "content": json.dumps(action)})
         kind = action["action"]
         if kind == "final_answer":
@@ -154,7 +180,7 @@ def ask(question: str) -> tuple[str, str]:
                     "Final SQL did not match the query executed; reporting the executed SQL."
                 )
             logger.info("[%d/8] final_answer -> %s", iteration, _short_summary(answer))
-            return answer, sql
+            return AgentResponse(answer, sql, steps)
 
         if kind == "get_schema":
             result = get_schema()
@@ -166,4 +192,11 @@ def ask(question: str) -> tuple[str, str]:
         logger.info("[%d/8] %s -> %s", iteration, kind, _short_summary(result))
         messages.append({"role": "user", "content": f"TOOL RESULT: {result}"})
 
-    raise RuntimeError("The agent did not finish within 8 iterations.")
+    raise AgentFailure(
+        "The agent did not finish within 8 iterations.", "hit_iteration_cap", steps
+    )
+
+
+def ask(question: str) -> tuple[str, str]:
+    result = ask_detailed(question)
+    return result.answer, result.sql
