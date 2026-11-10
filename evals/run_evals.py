@@ -154,12 +154,12 @@ def evaluate_question(
     expected_unanswerable = question.get("expected_unanswerable", False)
     if expected_unanswerable:
         correct = says_unanswerable(answer)
-        failure_type = "none" if correct else "wrong_result"
+        failure_type = "none" if correct else "answered_unanswerable"
         if not correct:
-            error = "Agent answered instead of identifying that the data cannot answer."
+            error = "Agent answered an unanswerable question instead of abstaining."
     elif says_unanswerable(answer):
         correct = False
-        failure_type = "answered_unanswerable"
+        failure_type = "wrong_result"
         error = "Agent said the data could not answer an answerable question."
     elif not agent_sql:
         correct = False
