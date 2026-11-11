@@ -32,6 +32,29 @@ database.
 The agent can run only a single read-only `SELECT`/`WITH ... SELECT` per query,
 returns at most 50 rows, and interrupts queries after five seconds.
 
+## Web interface
+
+Install the backend dependencies, then run the FastAPI server from the project
+root:
+
+```powershell
+pip install -r requirements.txt
+uvicorn api:app --reload --host 127.0.0.1 --port 8000
+```
+
+In another terminal, start the Next.js 14 frontend:
+
+```powershell
+cd frontend
+npm.cmd install
+npm.cmd run dev
+```
+
+The frontend API URL is configured in `frontend/.env.local` as
+`NEXT_PUBLIC_API_BASE=http://localhost:8000`. The API allows requests from
+`http://localhost:3000`, streams agent actions and results over Server-Sent
+Events, and accepts at most five concurrent analyst requests.
+
 ## Execution-accuracy evaluations
 
 The benchmark in `evals/questions.json` has 10 development questions and 20

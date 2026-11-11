@@ -2,7 +2,7 @@ import json
 import logging
 import re
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable
 
 import requests
 
@@ -24,6 +24,9 @@ class AgentFailure(RuntimeError):
         super().__init__(message)
         self.failure_type = failure_type
         self.steps = steps
+
+
+AgentEventHandler = Callable[[str, dict[str, Any]], None]
 
 
 SYSTEM_PROMPT = """You are Sequel, a careful text-to-SQL analyst. Use only the available DuckDB data.
@@ -131,7 +134,11 @@ def _short_summary(result: str) -> str:
     return " ".join(result.split())[:180]
 
 
-def ask_detailed(question: str, model: str | None = None) -> AgentResponse:
+def ask_detailed(
+    question: str,
+    model: str | None = None,
+    on_event: AgentEventHandler | None = None,
+) -> AgentResponse:
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": question},
@@ -149,6 +156,18 @@ def ask_detailed(question: str, model: str | None = None) -> AgentResponse:
                 _validate_action(action)
                 break
             except (ValueError, json.JSONDecodeError) as exc:
+                if on_event is not None:
+                    on_event(
+                        "result",
+                        {
+                            "step": steps,
+                            "error": True,
+                            "summary": (
+                                "Invalid JSON response; asking the model to retry. "
+                                f"{exc}"
+                            ),
+                        },
+                    )
                 messages.append({"role": "assistant", "content": raw_reply})
                 messages.append(
                     {
@@ -172,6 +191,11 @@ def ask_detailed(question: str, model: str | None = None) -> AgentResponse:
             )
         messages.append({"role": "assistant", "content": json.dumps(action)})
         kind = action["action"]
+        if on_event is not None:
+            action_data: dict[str, Any] = {"step": iteration, "tool": kind}
+            if kind == "run_sql":
+                action_data["sql"] = action["query"]
+            on_event("action", action_data)
         if kind == "final_answer":
             answer = action["answer"].strip()
             sql = last_successful_sql
@@ -190,6 +214,27 @@ def ask_detailed(question: str, model: str | None = None) -> AgentResponse:
                 last_successful_sql = action["query"].strip()
 
         logger.info("[%d/8] %s -> %s", iteration, kind, _short_summary(result))
+        if on_event is not None:
+            error = result.startswith("SQL error:")
+            result_data: dict[str, Any] = {
+                "step": iteration,
+                "error": error,
+                "summary": _short_summary(result),
+            }
+            if kind == "run_sql" and not error:
+                try:
+                    rows_payload = json.loads(result)
+                except json.JSONDecodeError:
+                    pass
+                else:
+                    result_data.update(
+                        {
+                            "columns": rows_payload.get("columns", []),
+                            "rows": rows_payload.get("rows", []),
+                            "truncated": rows_payload.get("truncated", False),
+                        }
+                    )
+            on_event("result", result_data)
         messages.append({"role": "user", "content": f"TOOL RESULT: {result}"})
 
     raise AgentFailure(
