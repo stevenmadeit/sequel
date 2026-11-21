@@ -29,6 +29,9 @@ button, textarea { font: inherit; }
 .breadcrumb { color: #7d8981; font-size: 9px; }
 .breadcrumb span { color: #39433c; margin: 0 8px; }
 .topbar-right { display: flex; align-items: center; gap: 8px; font-size: 9px; }
+.demo-banner { display: flex; align-items: center; gap: 9px; padding: 11px 42px; border-bottom: 1px solid #53633f; background: #192119; color: #c9d9ba; font-size: 11px; line-height: 1.5; }
+.demo-banner svg { flex: none; color: #c1f17b; }
+.demo-banner a { color: #c1f17b; text-decoration: underline; text-underline-offset: 3px; }
 .page-content { max-width: 1140px; margin: 0 auto; padding: 55px 42px 80px; }
 .page-heading { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 33px; }
 .eyebrow { color: #b1e675; }
@@ -51,6 +54,9 @@ h1 { margin: 10px 0 9px; font: 700 clamp(30px, 4vw, 42px) "Manrope", sans-serif;
 .examples-label { margin-right: 4px; font: 9px "DM Mono", monospace; color: #6f7a72; letter-spacing: .6px; }
 .example-chip { border: 1px solid #27312a; border-radius: 20px; padding: 7px 11px; color: #a5aea7; background: transparent; font-size: 11px; cursor: pointer; }
 .example-chip:hover { border-color: #637d48; color: #d6e5cb; }
+.example-chip:disabled { opacity: .5; cursor: wait; }
+.demo-question { display: inline-flex; align-items: flex-start; gap: 7px; max-width: 100%; text-align: left; }
+.demo-question svg { flex: none; margin-top: 2px; color: #b1e675; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; margin: 0 0 12px; }
 .section-heading h2 { margin: 0; font: 600 14px "Manrope", sans-serif; }
 .live-badge { display: flex; align-items: center; gap: 7px; color: #849087; font: 9px "DM Mono", monospace; }
@@ -128,11 +134,13 @@ h1 { margin: 10px 0 9px; font: 700 clamp(30px, 4vw, 42px) "Manrope", sans-serif;
   .sidebar-bottom { padding: 17px 0 4px; }
   .main-area { margin-left: 64px; }
   .topbar { padding: 0 22px; }
+  .demo-banner { padding: 11px 22px; }
   .page-content { padding: 38px 22px 60px; }
 }
 @media (max-width: 560px) {
   .topbar-right { display: none; }
   .page-content { padding: 29px 14px 50px; }
+  .demo-banner { padding: 10px 14px; }
   .page-heading { display: block; }
   .hero-tag { display: inline-block; margin-top: 14px; }
   .question-card { padding: 14px; }

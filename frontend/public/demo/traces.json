@@ -1,0 +1,620 @@
+{
+  "model": "qwen2.5-coder:7b",
+  "recorded_at": "2026-11-20T22:40:28.166423-08:00",
+  "traces": [
+    {
+      "id": "post-count",
+      "difficulty": "easy",
+      "question": "How many job postings are in the database?",
+      "model": "qwen2.5-coder:7b",
+      "events": [
+        {
+          "type": "action",
+          "data": {
+            "step": 1,
+            "tool": "get_schema"
+          }
+        },
+        {
+          "type": "result",
+          "data": {
+            "step": 1,
+            "error": false,
+            "summary": "# Data schema ## stg_jobs One cleaned row per job posting. | Column | Type | Meaning | Example | |---|---|---|---| | `job_id` | text | Identifier of the job posting, taken from the"
+          }
+        },
+        {
+          "type": "action",
+          "data": {
+            "step": 2,
+            "tool": "run_sql",
+            "sql": "SELECT COUNT(*) AS total_postings FROM stg_jobs"
+          }
+        },
+        {
+          "type": "result",
+          "data": {
+            "step": 2,
+            "error": false,
+            "summary": "{\"columns\": [\"total_postings\"], \"rows\": [[71]], \"row_count\": 1, \"truncated\": false}",
+            "columns": [
+              "total_postings"
+            ],
+            "rows": [
+              [
+                71
+              ]
+            ],
+            "truncated": false
+          }
+        },
+        {
+          "type": "action",
+          "data": {
+            "step": 3,
+            "tool": "final_answer"
+          }
+        },
+        {
+          "type": "final",
+          "data": {
+            "answer": "There are 71 job postings in the database.",
+            "sql": "SELECT COUNT(*) AS total_postings FROM stg_jobs",
+            "steps": 3
+          }
+        }
+      ],
+      "answer": "There are 71 job postings in the database.",
+      "sql": "SELECT COUNT(*) AS total_postings FROM stg_jobs",
+      "steps": 3
+    },
+    {
+      "id": "company-count",
+      "difficulty": "easy",
+      "question": "How many distinct companies have job postings?",
+      "model": "qwen2.5-coder:7b",
+      "events": [
+        {
+          "type": "action",
+          "data": {
+            "step": 1,
+            "tool": "get_schema"
+          }
+        },
+        {
+          "type": "result",
+          "data": {
+            "step": 1,
+            "error": false,
+            "summary": "# Data schema ## stg_jobs One cleaned row per job posting. | Column | Type | Meaning | Example | |---|---|---|---| | `job_id` | text | Identifier of the job posting, taken from the"
+          }
+        },
+        {
+          "type": "action",
+          "data": {
+            "step": 2,
+            "tool": "run_sql",
+            "sql": "SELECT COUNT(DISTINCT company_name) AS distinct_companies FROM stg_jobs"
+          }
+        },
+        {
+          "type": "result",
+          "data": {
+            "step": 2,
+            "error": false,
+            "summary": "{\"columns\": [\"distinct_companies\"], \"rows\": [[11]], \"row_count\": 1, \"truncated\": false}",
+            "columns": [
+              "distinct_companies"
+            ],
+            "rows": [
+              [
+                11
+              ]
+            ],
+            "truncated": false
+          }
+        },
+        {
+          "type": "action",
+          "data": {
+            "step": 3,
+            "tool": "final_answer"
+          }
+        },
+        {
+          "type": "final",
+          "data": {
+            "answer": "There are 11 distinct companies with job postings.",
+            "sql": "SELECT COUNT(DISTINCT company_name) AS distinct_companies FROM stg_jobs",
+            "steps": 3
+          }
+        }
+      ],
+      "answer": "There are 11 distinct companies with job postings.",
+      "sql": "SELECT COUNT(DISTINCT company_name) AS distinct_companies FROM stg_jobs",
+      "steps": 3
+    },
+    {
+      "id": "top-skills",
+      "difficulty": "medium",
+      "question": "Which skill is mentioned most often, and how many mentions does it have?",
+      "model": "qwen2.5-coder:7b",
+      "events": [
+        {
+          "type": "action",
+          "data": {
+            "step": 1,
+            "tool": "get_schema"
+          }
+        },
+        {
+          "type": "result",
+          "data": {
+            "step": 1,
+            "error": false,
+            "summary": "# Data schema ## stg_jobs One cleaned row per job posting. | Column | Type | Meaning | Example | |---|---|---|---| | `job_id` | text | Identifier of the job posting, taken from the"
+          }
+        },
+        {
+          "type": "action",
+          "data": {
+            "step": 2,
+            "tool": "run_sql",
+            "sql": "SELECT skill, COUNT(*) AS mentions FROM job_skills GROUP BY skill ORDER BY mentions DESC LIMIT 1"
+          }
+        },
+        {
+          "type": "result",
+          "data": {
+            "step": 2,
+            "error": true,
+            "summary": "SQL error: a grouped ranking with LIMIT 1 can hide tied maxima. Remove LIMIT 1 or use RANK() so all tied results are returned."
+          }
+        },
+        {
+          "type": "action",
+          "data": {
+            "step": 3,
+            "tool": "run_sql",
+            "sql": "WITH ranked AS (SELECT skill, COUNT(*) AS mentions, RANK() OVER (ORDER BY COUNT(*) DESC) AS rank FROM job_skills GROUP BY skill) SELECT skill, mentions FROM ranked WHERE rank = 1"
+          }
+        },
+        {
+          "type": "result",
+          "data": {
+            "step": 3,
+            "error": false,
+            "summary": "{\"columns\": [\"skill\", \"mentions\"], \"rows\": [[\"JavaScript\", 7]], \"row_count\": 1, \"truncated\": false}",
+            "columns": [
+              "skill",
+              "mentions"
+            ],
+            "rows": [
+              [
+                "JavaScript",
+                7
+              ]
+            ],
+            "truncated": false
+          }
+        },
+        {
+          "type": "action",
+          "data": {
+            "step": 4,
+            "tool": "final_answer"
+          }
+        },
+        {
+          "type": "final",
+          "data": {
+            "answer": "JavaScript is mentioned most often with 7 mentions.",
+            "sql": "WITH ranked AS (SELECT skill, COUNT(*) AS mentions, RANK() OVER (ORDER BY COUNT(*) DESC) AS rank FROM job_skills GROUP BY skill) SELECT skill, mentions FROM ranked WHERE rank = 1",
+            "steps": 4
+          }
+        }
+      ],
+      "answer": "JavaScript is mentioned most often with 7 mentions.",
+      "sql": "WITH ranked AS (SELECT skill, COUNT(*) AS mentions, RANK() OVER (ORDER BY COUNT(*) DESC) AS rank FROM job_skills GROUP BY skill) SELECT skill, mentions FROM ranked WHERE rank = 1",
+      "steps": 4
+    },
+    {
+      "id": "top-category",
+      "difficulty": "medium",
+      "question": "Which job category has the most job postings?",
+      "model": "qwen2.5-coder:7b",
+      "events": [
+        {
+          "type": "action",
+          "data": {
+            "step": 1,
+            "tool": "get_schema"
+          }
+        },
+        {
+          "type": "result",
+          "data": {
+            "step": 1,
+            "error": false,
+            "summary": "# Data schema ## stg_jobs One cleaned row per job posting. | Column | Type | Meaning | Example | |---|---|---|---| | `job_id` | text | Identifier of the job posting, taken from the"
+          }
+        },
+        {
+          "type": "action",
+          "data": {
+            "step": 2,
+            "tool": "run_sql",
+            "sql": "SELECT category, COUNT(*) AS job_postings FROM stg_jobs GROUP BY category ORDER BY job_postings DESC LIMIT 1"
+          }
+        },
+        {
+          "type": "result",
+          "data": {
+            "step": 2,
+            "error": true,
+            "summary": "SQL error: a grouped ranking with LIMIT 1 can hide tied maxima. Remove LIMIT 1 or use RANK() so all tied results are returned."
+          }
+        },
+        {
+          "type": "action",
+          "data": {
+            "step": 3,
+            "tool": "run_sql",
+            "sql": "WITH ranked AS (SELECT category, COUNT(*) AS job_postings, RANK() OVER (ORDER BY COUNT(*) DESC) AS rank FROM stg_jobs GROUP BY category) SELECT category, job_postings FROM ranked WHERE rank = 1"
+          }
+        },
+        {
+          "type": "result",
+          "data": {
+            "step": 3,
+            "error": false,
+            "summary": "{\"columns\": [\"category\", \"job_postings\"], \"rows\": [[\"Software Development\", 24]], \"row_count\": 1, \"truncated\": false}",
+            "columns": [
+              "category",
+              "job_postings"
+            ],
+            "rows": [
+              [
+                "Software Development",
+                24
+              ]
+            ],
+            "truncated": false
+          }
+        },
+        {
+          "type": "action",
+          "data": {
+            "step": 4,
+            "tool": "final_answer"
+          }
+        },
+        {
+          "type": "final",
+          "data": {
+            "answer": "The category with the most job postings is Software Development with 24 postings.",
+            "sql": "WITH ranked AS (SELECT category, COUNT(*) AS job_postings, RANK() OVER (ORDER BY COUNT(*) DESC) AS rank FROM stg_jobs GROUP BY category) SELECT category, job_postings FROM ranked WHERE rank = 1",
+            "steps": 4
+          }
+        }
+      ],
+      "answer": "The category with the most job postings is Software Development with 24 postings.",
+      "sql": "WITH ranked AS (SELECT category, COUNT(*) AS job_postings, RANK() OVER (ORDER BY COUNT(*) DESC) AS rank FROM stg_jobs GROUP BY category) SELECT category, job_postings FROM ranked WHERE rank = 1",
+      "steps": 4
+    },
+    {
+      "id": "javascript-trend",
+      "difficulty": "medium",
+      "question": "Show daily job posting counts from August 25 through September 5, 2026.",
+      "model": "qwen2.5-coder:7b",
+      "events": [
+        {
+          "type": "action",
+          "data": {
+            "step": 1,
+            "tool": "get_schema"
+          }
+        },
+        {
+          "type": "result",
+          "data": {
+            "step": 1,
+            "error": false,
+            "summary": "# Data schema ## stg_jobs One cleaned row per job posting. | Column | Type | Meaning | Example | |---|---|---|---| | `job_id` | text | Identifier of the job posting, taken from the"
+          }
+        },
+        {
+          "type": "action",
+          "data": {
+            "step": 2,
+            "tool": "run_sql",
+            "sql": "SELECT CAST(publication_date AS DATE) AS date, COUNT(*) AS job_posting_count FROM stg_jobs WHERE publication_date BETWEEN '2026-08-25 00:00:00' AND '2026-09-05 23:59:59' GROUP BY CAST(publication_date AS DATE) ORDER BY date"
+          }
+        },
+        {
+          "type": "result",
+          "data": {
+            "step": 2,
+            "error": false,
+            "summary": "{\"columns\": [\"date\", \"job_posting_count\"], \"rows\": [[\"2026-08-25\", 4], [\"2026-08-26\", 4], [\"2026-08-27\", 4], [\"2026-09-02\", 3], [\"2026-09-04\", 1], [\"2026-09-05\", 2]], \"row_count\": ",
+            "columns": [
+              "date",
+              "job_posting_count"
+            ],
+            "rows": [
+              [
+                "2026-08-25",
+                4
+              ],
+              [
+                "2026-08-26",
+                4
+              ],
+              [
+                "2026-08-27",
+                4
+              ],
+              [
+                "2026-09-02",
+                3
+              ],
+              [
+                "2026-09-04",
+                1
+              ],
+              [
+                "2026-09-05",
+                2
+              ]
+            ],
+            "truncated": false
+          }
+        },
+        {
+          "type": "action",
+          "data": {
+            "step": 3,
+            "tool": "final_answer"
+          }
+        },
+        {
+          "type": "final",
+          "data": {
+            "answer": "Daily job posting counts from August 25 through September 5, 2026:\n2026-08-25: 4\n2026-08-26: 4\n2026-08-27: 4\n2026-09-02: 3\n2026-09-04: 1\n2026-09-05: 2",
+            "sql": "SELECT CAST(publication_date AS DATE) AS date, COUNT(*) AS job_posting_count FROM stg_jobs WHERE publication_date BETWEEN '2026-08-25 00:00:00' AND '2026-09-05 23:59:59' GROUP BY CAST(publication_date AS DATE) ORDER BY date",
+            "steps": 3
+          }
+        }
+      ],
+      "answer": "Daily job posting counts from August 25 through September 5, 2026:\n2026-08-25: 4\n2026-08-26: 4\n2026-08-27: 4\n2026-09-02: 3\n2026-09-04: 1\n2026-09-05: 2",
+      "sql": "SELECT CAST(publication_date AS DATE) AS date, COUNT(*) AS job_posting_count FROM stg_jobs WHERE publication_date BETWEEN '2026-08-25 00:00:00' AND '2026-09-05 23:59:59' GROUP BY CAST(publication_date AS DATE) ORDER BY date",
+      "steps": 3
+    },
+    {
+      "id": "cooccurring-skills",
+      "difficulty": "hard",
+      "question": "Which skills appear together in the most job postings? Include every tied pair.",
+      "model": "qwen2.5-coder:7b",
+      "events": [
+        {
+          "type": "action",
+          "data": {
+            "step": 1,
+            "tool": "get_schema"
+          }
+        },
+        {
+          "type": "result",
+          "data": {
+            "step": 1,
+            "error": false,
+            "summary": "# Data schema ## stg_jobs One cleaned row per job posting. | Column | Type | Meaning | Example | |---|---|---|---| | `job_id` | text | Identifier of the job posting, taken from the"
+          }
+        },
+        {
+          "type": "action",
+          "data": {
+            "step": 2,
+            "tool": "run_sql",
+            "sql": "WITH pairs AS (SELECT a.skill AS skill_1, b.skill AS skill_2, COUNT(*) AS postings FROM job_skills a JOIN job_skills b ON a.job_id=b.job_id AND a.skill<b.skill GROUP BY a.skill,b.skill), ranked AS (SELECT skill_1, skill_2, postings, RANK() OVER (ORDER BY postings DESC) AS position FROM pairs) SELECT skill_1, skill_2, postings FROM ranked WHERE position=1 ORDER BY skill_1,skill_2"
+          }
+        },
+        {
+          "type": "result",
+          "data": {
+            "step": 2,
+            "error": false,
+            "summary": "{\"columns\": [\"skill_1\", \"skill_2\", \"postings\"], \"rows\": [[\"JavaScript\", \"React\", 6], [\"JavaScript\", \"Ruby\", 6], [\"React\", \"Ruby\", 6]], \"row_count\": 3, \"truncated\": false}",
+            "columns": [
+              "skill_1",
+              "skill_2",
+              "postings"
+            ],
+            "rows": [
+              [
+                "JavaScript",
+                "React",
+                6
+              ],
+              [
+                "JavaScript",
+                "Ruby",
+                6
+              ],
+              [
+                "React",
+                "Ruby",
+                6
+              ]
+            ],
+            "truncated": false
+          }
+        },
+        {
+          "type": "action",
+          "data": {
+            "step": 3,
+            "tool": "final_answer"
+          }
+        },
+        {
+          "type": "final",
+          "data": {
+            "answer": "JavaScript and React and JavaScript and Ruby and React and Ruby tie at 6 postings.",
+            "sql": "WITH pairs AS (SELECT a.skill AS skill_1, b.skill AS skill_2, COUNT(*) AS postings FROM job_skills a JOIN job_skills b ON a.job_id=b.job_id AND a.skill<b.skill GROUP BY a.skill,b.skill), ranked AS (SELECT skill_1, skill_2, postings, RANK() OVER (ORDER BY postings DESC) AS position FROM pairs) SELECT skill_1, skill_2, postings FROM ranked WHERE position=1 ORDER BY skill_1,skill_2",
+            "steps": 3
+          }
+        }
+      ],
+      "answer": "JavaScript and React and JavaScript and Ruby and React and Ruby tie at 6 postings.",
+      "sql": "WITH pairs AS (SELECT a.skill AS skill_1, b.skill AS skill_2, COUNT(*) AS postings FROM job_skills a JOIN job_skills b ON a.job_id=b.job_id AND a.skill<b.skill GROUP BY a.skill,b.skill), ranked AS (SELECT skill_1, skill_2, postings, RANK() OVER (ORDER BY postings DESC) AS position FROM pairs) SELECT skill_1, skill_2, postings FROM ranked WHERE position=1 ORDER BY skill_1,skill_2",
+      "steps": 3
+    },
+    {
+      "id": "monthly-counts-recovery",
+      "difficulty": "hard",
+      "question": "Count job postings by month. Use TO_CHAR(publication_date, 'YYYY-MM') as the month label.",
+      "model": "qwen2.5-coder:7b",
+      "events": [
+        {
+          "type": "action",
+          "data": {
+            "step": 1,
+            "tool": "get_schema"
+          }
+        },
+        {
+          "type": "result",
+          "data": {
+            "step": 1,
+            "error": false,
+            "summary": "# Data schema ## stg_jobs One cleaned row per job posting. | Column | Type | Meaning | Example | |---|---|---|---| | `job_id` | text | Identifier of the job posting, taken from the"
+          }
+        },
+        {
+          "type": "action",
+          "data": {
+            "step": 2,
+            "tool": "run_sql",
+            "sql": "SELECT TO_CHAR(publication_date, 'YYYY-MM') AS month, COUNT(*) AS job_posting_count FROM stg_jobs GROUP BY month ORDER BY month"
+          }
+        },
+        {
+          "type": "result",
+          "data": {
+            "step": 2,
+            "error": true,
+            "summary": "SQL error: Catalog Error: Scalar Function with name to_char does not exist! Did you mean \"to_hours\"? LINE 1: SELECT TO_CHAR(publication_date, 'YYYY-MM') AS month, COUNT(*)... ^^^^^"
+          }
+        },
+        {
+          "type": "action",
+          "data": {
+            "step": 3,
+            "tool": "run_sql",
+            "sql": "SELECT DATE_TRUNC('month', publication_date) AS month, COUNT(*) AS job_posting_count FROM stg_jobs GROUP BY month ORDER BY month"
+          }
+        },
+        {
+          "type": "result",
+          "data": {
+            "step": 3,
+            "error": false,
+            "summary": "{\"columns\": [\"month\", \"job_posting_count\"], \"rows\": [[\"2026-08-01 00:00:00-07:00\", 65], [\"2026-09-01 00:00:00-07:00\", 6]], \"row_count\": 2, \"truncated\": false}",
+            "columns": [
+              "month",
+              "job_posting_count"
+            ],
+            "rows": [
+              [
+                "2026-08-01 00:00:00-07:00",
+                65
+              ],
+              [
+                "2026-09-01 00:00:00-07:00",
+                6
+              ]
+            ],
+            "truncated": false
+          }
+        },
+        {
+          "type": "action",
+          "data": {
+            "step": 4,
+            "tool": "final_answer"
+          }
+        },
+        {
+          "type": "final",
+          "data": {
+            "answer": "Job postings by month: August 2026 had 65 postings, and September 2026 had 6 postings.",
+            "sql": "SELECT DATE_TRUNC('month', publication_date) AS month, COUNT(*) AS job_posting_count FROM stg_jobs GROUP BY month ORDER BY month",
+            "steps": 4
+          }
+        }
+      ],
+      "answer": "Job postings by month: August 2026 had 65 postings, and September 2026 had 6 postings.",
+      "sql": "SELECT DATE_TRUNC('month', publication_date) AS month, COUNT(*) AS job_posting_count FROM stg_jobs GROUP BY month ORDER BY month",
+      "steps": 4
+    },
+    {
+      "id": "unanswerable-interviews",
+      "difficulty": "hard",
+      "question": "What is the average number of interview rounds by company?",
+      "expected_unanswerable": true,
+      "model": "qwen2.5-coder:7b",
+      "events": [
+        {
+          "type": "action",
+          "data": {
+            "step": 1,
+            "tool": "get_schema"
+          }
+        },
+        {
+          "type": "result",
+          "data": {
+            "step": 1,
+            "error": false,
+            "summary": "# Data schema ## stg_jobs One cleaned row per job posting. | Column | Type | Meaning | Example | |---|---|---|---| | `job_id` | text | Identifier of the job posting, taken from the"
+          }
+        },
+        {
+          "type": "action",
+          "data": {
+            "step": 2,
+            "tool": "run_sql",
+            "sql": "SELECT company_name, AVG(interview_rounds) AS avg_interview_rounds FROM stg_jobs GROUP BY company_name"
+          }
+        },
+        {
+          "type": "result",
+          "data": {
+            "step": 2,
+            "error": true,
+            "summary": "SQL error: Binder Error: Referenced column \"interview_rounds\" not found in FROM clause! Candidate bindings: \"description\", \"publication_date\", \"category\" LINE 1: SELECT company_nam"
+          }
+        },
+        {
+          "type": "action",
+          "data": {
+            "step": 3,
+            "tool": "final_answer"
+          }
+        },
+        {
+          "type": "final",
+          "data": {
+            "answer": "The column 'interview_rounds' does not exist in the 'stg_jobs' table. Please check the table schema for available columns.",
+            "sql": "",
+            "steps": 3
+          }
+        }
+      ],
+      "answer": "The column 'interview_rounds' does not exist in the 'stg_jobs' table. Please check the table schema for available columns.",
+      "sql": "",
+      "steps": 3
+    }
+  ]
+}

@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Database } from "lucide-react";
 
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
 
 export default function SchemaPage() {
@@ -14,7 +15,7 @@ export default function SchemaPage() {
 
   useEffect(() => {
     let active = true;
-    fetch(`${API_BASE}/schema`)
+    fetch(DEMO_MODE ? "/demo/schema.json" : `${API_BASE}/schema`)
       .then(async (response) => {
         if (!response.ok) throw new Error(await response.text());
         return response.json() as Promise<{ content: string }>;

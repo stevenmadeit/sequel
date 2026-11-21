@@ -1,8 +1,9 @@
 "use client";
 
-import { FormEvent, useRef, useState } from "react";
-import { ArrowUp, Check, CircleAlert, LoaderCircle, Sparkles, Terminal } from "lucide-react";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { ArrowUp, Check, CircleAlert, LoaderCircle, Play, Sparkles, Terminal } from "lucide-react";
 
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
 const examples = [
   "How many job postings are in the database?",
@@ -13,6 +14,12 @@ const examples = [
 type TraceItem = { id: number; type: "action" | "result" | "error"; data: Record<string, unknown> };
 type ResultTable = { columns: string[]; rows: unknown[][]; truncated: boolean };
 type FinalAnswer = { answer: string; sql: string; steps?: number };
+type RecordedTrace = {
+  id: string;
+  question: string;
+  difficulty: string;
+  events: { type: TraceItem["type"] | "final"; data: Record<string, unknown> }[];
+};
 
 function isResultTable(value: unknown): value is ResultTable {
   return Boolean(value && typeof value === "object" && "columns" in value && "rows" in value);
@@ -25,13 +32,58 @@ export default function HomePage() {
   const [table, setTable] = useState<ResultTable | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [recordedTraces, setRecordedTraces] = useState<RecordedTrace[]>([]);
+  const [demoLoadError, setDemoLoadError] = useState("");
   const nextId = useRef(0);
+
+  useEffect(() => {
+    if (!DEMO_MODE) return;
+    fetch("/demo/traces.json")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Recorded demo traces are unavailable.");
+        return response.json() as Promise<{ traces: RecordedTrace[] }>;
+      })
+      .then((data) => setRecordedTraces(data.traces))
+      .catch((caught: unknown) =>
+        setDemoLoadError(caught instanceof Error ? caught.message : "Could not load demo traces."),
+      );
+  }, []);
 
   function addTrace(type: TraceItem["type"], data: Record<string, unknown>) {
     setTrace((current) => [...current, { id: nextId.current++, type, data }]);
   }
 
+  async function playDemo(recorded: RecordedTrace) {
+    if (busy) return;
+    setQuestion(recorded.question);
+    setTrace([]);
+    setFinal(null);
+    setTable(null);
+    setError("");
+    setBusy(true);
+    for (const event of recorded.events) {
+      await new Promise((resolve) => setTimeout(resolve, 420));
+      if (event.type === "final") {
+        setFinal(event.data as FinalAnswer);
+      } else if (event.type === "error") {
+        addTrace("error", event.data);
+        setError(String(event.data.message ?? "The agent encountered an error."));
+      } else {
+        addTrace(event.type, event.data);
+        if (event.type === "result" && isResultTable(event.data)) {
+          setTable({
+            columns: event.data.columns,
+            rows: event.data.rows,
+            truncated: Boolean(event.data.truncated),
+          });
+        }
+      }
+    }
+    setBusy(false);
+  }
+
   async function submit(event?: FormEvent) {
+    if (DEMO_MODE) return;
     event?.preventDefault();
     const prompt = question.trim();
     if (!prompt || busy) return;
@@ -114,7 +166,7 @@ export default function HomePage() {
         <textarea
           id="question"
           className="question-input"
-          placeholder="Ask a question about your data..."
+          placeholder={DEMO_MODE ? "Choose one of the recorded questions below..." : "Ask a question about your data..."}
           value={question}
           onChange={(event) => setQuestion(event.target.value)}
           onKeyDown={(event) => {
@@ -123,11 +175,11 @@ export default function HomePage() {
               void submit();
             }
           }}
-          disabled={busy}
+          disabled={busy || DEMO_MODE}
         />
         <div className="composer-footer">
-          <span className="hint">Your data stays on this machine · Enter to run</span>
-          <button className="primary-button" disabled={busy || !question.trim()} type="submit">
+          <span className="hint">{DEMO_MODE ? "Recorded questions only · Live agent runs locally" : "Your data stays on this machine · Enter to run"}</span>
+          <button className="primary-button" disabled={busy || DEMO_MODE || !question.trim()} type="submit">
             {busy ? <LoaderCircle size={15} className="loading-pulse" /> : <ArrowUp size={15} />}
             {busy ? "Thinking..." : "Ask Sequel"}
           </button>
@@ -135,11 +187,18 @@ export default function HomePage() {
       </form>
 
       <div className="examples">
-        <span className="examples-label">TRY ASKING</span>
-        {examples.map((example) => (
+        <span className="examples-label">{DEMO_MODE ? "RECORDED QUESTIONS" : "TRY ASKING"}</span>
+        {DEMO_MODE ? (
+          recordedTraces.map((recorded) => (
+            <button key={recorded.id} type="button" className="example-chip demo-question" disabled={busy} onClick={() => void playDemo(recorded)}>
+              <Play size={11} /> {recorded.question}
+            </button>
+          ))
+        ) : examples.map((example) => (
           <button key={example} type="button" className="example-chip" onClick={() => setQuestion(example)}>{example}</button>
         ))}
       </div>
+      {demoLoadError && <div className="error-banner">{demoLoadError}</div>}
 
       <div className="section-heading">
         <h2>Agent trace</h2>

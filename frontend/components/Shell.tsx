@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarChart3, Database, MessageSquareText, Sparkles } from "lucide-react";
 
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+
 const navigation = [
   { href: "/", label: "Ask Sequel", icon: MessageSquareText },
   { href: "/evals", label: "Evaluations", icon: BarChart3 },
@@ -45,6 +47,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <div className="breadcrumb">SEQUEL <span>/</span> ANALYST WORKSPACE</div>
           <div className="topbar-right"><span className="model-pip" /> LOCAL MODEL</div>
         </header>
+        {DEMO_MODE && (
+          <div className="demo-banner">
+            <Sparkles size={15} />
+            <span>
+              Recorded demo. The live agent runs locally with Ollama and DuckDB. See the{" "}
+              <a href="https://github.com/stevenmadeit/sequel#web-interface" target="_blank" rel="noreferrer">README</a> to run it yourself.
+            </span>
+          </div>
+        )}
         <div className="page-content">{children}</div>
       </main>
     </div>

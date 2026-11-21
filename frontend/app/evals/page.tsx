@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AlertCircle, ChevronRight, FlaskConical, LoaderCircle } from "lucide-react";
 
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
 type DifficultyMetric = { correct: number; total: number; accuracy: number };
 type Run = {
@@ -27,6 +28,21 @@ export default function EvalsPage() {
 
   const selectRun = useCallback(async (runId: string) => {
     setSelected(runId);
+    setError("");
+    if (DEMO_MODE) {
+      setDetailLoading(true);
+      try {
+        const response = await fetch("/demo/evals.json");
+        if (!response.ok) throw new Error("Recorded evaluation results are unavailable.");
+        const data = await response.json() as { results: (QuestionResult & { run_id: string })[] };
+        setResults(data.results.filter((result) => result.run_id === runId));
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : "Could not load demo results.");
+      } finally {
+        setDetailLoading(false);
+      }
+      return;
+    }
     setDetailLoading(true);
     setError("");
     try {
@@ -42,6 +58,28 @@ export default function EvalsPage() {
   }, []);
 
   useEffect(() => {
+    if (DEMO_MODE) {
+      fetch("/demo/evals.json")
+        .then(async (response) => {
+          if (!response.ok) throw new Error("Recorded evaluation results are unavailable.");
+          return response.json() as Promise<{ runs: Run[]; results: (QuestionResult & { run_id: string })[] }>;
+        })
+        .then((data) => {
+          setRuns(data.runs);
+          const firstTest = data.runs
+            .filter((run) => run.split === "test")
+            .sort((a, b) => b.accuracy - a.accuracy)[0];
+          if (firstTest) {
+            setSelected(firstTest.run_id);
+            setResults(data.results.filter((result) => result.run_id === firstTest.run_id));
+          }
+        })
+        .catch((caught: unknown) =>
+          setError(caught instanceof Error ? caught.message : "Could not load demo evaluations."),
+        )
+        .finally(() => setLoading(false));
+      return;
+    }
     fetch(`${API_BASE}/evals`)
       .then(async (response) => {
         if (!response.ok) throw new Error(await response.text());

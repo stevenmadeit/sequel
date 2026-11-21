@@ -42,7 +42,7 @@ pip install -r requirements.txt
 uvicorn api:app --reload --host 127.0.0.1 --port 8000
 ```
 
-In another terminal, start the Next.js 14 frontend:
+In another terminal, start the Next.js frontend:
 
 ```powershell
 cd frontend
@@ -101,3 +101,14 @@ Limitations:
 - Results cover a single dataset.
 - Gold queries were written by an LLM.
 - Each model was run once, so run-to-run variance is not measured.
+
+## Deploying the demo to Vercel
+
+Import the repository into Vercel and set the project **Root Directory** to
+`frontend`. Add the environment variable `NEXT_PUBLIC_DEMO_MODE=true` so the
+site serves recorded traces, evaluation snapshots, and schema documentation
+without requiring a running backend. The live analyst still runs locally with
+Ollama and DuckDB.
+
+[Open the live demo](https://your-vercel-deployment-url.vercel.app) (deployment
+URL placeholder).
